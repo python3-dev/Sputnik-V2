@@ -64,7 +64,7 @@ while(True):
         for i in range(len(a.keys())):
             if not (a.keys()[i] in b):
                 main_dict[a.keys()[i]] = (a[a.keys()[i]])
-    print str(datetime.datetime.now()) + ': ' + 'Main article database have ' + len(main_dict.keys()) + 'articles now.'
+    print str(datetime.datetime.now()) + ': ' + 'Main article database have ' + str(len(main_dict.keys())) + 'articles now.'
 
     if (len(tweet_dict.keys()) > 15*len(feed_dict.keys())):
         for article_title in main_dict.keys(): #Remove entries if the tweeet is already published
@@ -79,7 +79,7 @@ while(True):
         if not (article_title in tweet_dict.keys()):
             tweet_dict[article_title] = [tweetComposer(article_title, main_dict),0]
             main_dict[article_title][4] = 1 #Marking that tweet has been composed
-    print(str(datetime.datetime.now()) + ': ' + 'Added ' + len(tweet_dict.keys()) + ' tweets added to Tweet database')
+    print(str(datetime.datetime.now()) + ': ' + 'Added ' + str(len(tweet_dict.keys())) + ' tweets added to Tweet database')
     
     if (len(tweet_dict.keys()) > 15*len(feed_dict.keys())):
         for article_title in tweet_dict.keys(): #Remove entries if the tweeet is already published

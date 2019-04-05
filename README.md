@@ -1,0 +1,1 @@
+Sputnik V2 is an automated social media manager for your brand. Written in Python 2.7, it fetches updates from multiple RSS feeds, it intearacts with the Twitter API and publish them one by one in Twitter. A detailed documentation for Sputnik will be available soon.
