@@ -13,10 +13,7 @@ Sputnik 0.2
 import datetime
 import feedparser
 import time
-#import pandas as pd
 from unidecode import unidecode
-#from sys import getsizeof
-from RiteKit import hashTweet
 from TweetCheyy import TweetPotte
 from TwitterHandles import handleThaa
 from mainConf import *
