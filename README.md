@@ -8,9 +8,9 @@ Apply for a dev account from https://dev.twitter.com/ and get the stuff filled i
 ## Setting up the RSS feeds
 Open the file 'mainConf.py'. Go to line 9. If you have to add two new RSS feeds: https://www.example.website.com/rss.xml & https://www.another.example.website.com/rss.xml, change the line 9 as follows.
 
-'''
+```
 feed_dict = {"E" : "https://www.newsclick.in/rss.xml", "B": "https://www.example.website.com/rss.xml", "C": "https://www.another.example.website.com/rss.xml"}
-'''
+```
 
 The strings "E", "B", "C" is abitrarily chosen. It can be anything of your choice. You will only have to ensure that the feeds are in the format <"random_string": "feed_URL">. Each of them must be separated using commas and enclosed in curly brackets {}.
 
