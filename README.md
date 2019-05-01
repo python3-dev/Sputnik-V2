@@ -12,20 +12,20 @@ Open the file 'mainConf.py'. Go to line 9. If you have to add two new RSS feeds:
 feed_dict = {"E" : "https://www.newsclick.in/rss.xml", "B": "https://www.example.website.com/rss.xml", "C": "https://www.another.example.website.com/rss.xml"}
 ```
 
-The strings "E", "B", "C" is abitrarily chosen. It can be anything of your choice. You will only have to ensure that the feeds are in the format <"random_string": "feed_URL">. Each of them must be separated using commas and enclosed in curly brackets {}.
+The keys "E", "B", "C" are abitrarily chosen. It can be anything of your choice. You will only have to ensure that the feeds are in the format <"random_string": "feed_URL">. Each of them must be separated using commas and enclosed in curly brackets {}.
 
 You can also alter the tweet_interval from the default value of 600 seconds to a new value. But it is recommended that this variable is untouched. Using a very small tweet_interval will result in rate limiting errors from Twitter API.
 ## Running the code
 Sputnik V2 is made to run on its own until it is interrupted. To run it in the foreground invoke the Python interpreter as follows, from the folder containing the code.
 
-'''
+```
 python main.py
-'''
+```
 
 If you want it to run the Python script in the background, issue the following in the terminal.
 
-'''
+```
 nohup python main.py &
-'''
+```
 
 If all the configurations are correct Tweets will get published at an interval of 600 seconds or whatever is set as long as the RSS feeds are populated and/or the code is running.
