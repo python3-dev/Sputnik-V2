@@ -3,7 +3,9 @@
 """
 Created on Tue Jan 29 03:57:59 2019
 
-@author: newsclick
+Twitter Handles Reader System for Sputnik v2 2.0
+
+@author: pratheesh
 """
 
 import csv
