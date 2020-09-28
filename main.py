@@ -1,83 +1,209 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 30 16:20:18 2018
-
-Sputnik v2 2.0
-
-@author: pratheesh
-"""
+#!/usr/bin/env python3
+# coding: utf-8
 
 import datetime
+import feedparser
 import time
-from unidecode import unidecode
-from tweetCheyy import TweetPotte
-from feedVaayikku import feedReader
-from messageOndaakku import messageComposer
-from notificationSystem import printMessage
+
+import pandas as pd
+
+from gTools import openSheet
 from telePublish import telegramPublish
-from mainConf import *
+from tweetPublish import twitterPublish
 
-main_dict = {}
-message_dict = {}
-lastmessagetime = 0
-lastmessage = ''
-starttime = time.time()
+url_list = ["https://newsclick.in/rss.xml", "https://hindi.newsclick.in/rss.xml", "https://www.youtube.com/feeds/videos.xml?channel_id=UCOF1iS7lmNRSWVqL8N3L6kQ"] 
 
-print(str(datetime.datetime.now()) + ': ' + 'Initialising...')
+TESTING = False #Make sure to turn this off while in production
+mention_authors = True #Whether to mention authors while tweeting.
+t_sleep = 300
+loop_condition = True
 
-while(True):
-    ac, arc, tc = 0, 0, 0  # For article, article removal and tweet counters
-    c = [] #Latest list of articles from multiple feeds
+class Article(object):
+    tag = 1
+    
+    def __init__(self, article_url, article_title, article_summary=None, article_author=None, article_published_time=None):
+        self.url = article_url
+        self.title = article_title
+        self.pub_date = article_published_time
+        self.articleid = Article.tag
+        self.tweeted = False
+        self.telegrammed = False
+        Article.tag += 1
 
-    for url in feed_dict.values(): #feed_dict, which is the dictionary of feeds is imported from mainConf.py
-        a = feedReader(url)
-        b = main_dict.keys()
-        for i in a.iterkeys():
-            c.append(i)
-            if not (i in b):
-                main_dict[i] = a[i] #Add an element to the main_dict, if it does not exist in main_dict
-                ac += 1 #Count the number of additions to main_dict during an iteration
+        if article_author == None:
+            self.article_author = []
+        else:
+            self.article_author = article_author.split(',')
 
-    for i in main_dict.iterkeys(): # Remove entries from the main_dict & tweet_dict only when the entry disappears from the feed items & when the item is tweeted
-        if not (i in c): #if an article_title in the dictionary is not found in the latest list of articles from the feeds
+        if article_summary == None:
+            self.article_summary = ''
+        else:
+            self.article_summary = article_summary
+    
+    def getTweetedStatus(self):
+        return(self.tweeted)
+    
+    def setTweetedStatus(self, truth_value):
+        self.tweeted = truth_value
+    
+    def getTelegrammedStatus(self):
+        return(self.telegrammed)
+
+    def getPublishedAllStatus(self):
+        return(self.telegrammed and self.tweeted)
+    
+    def setTelegrammedStatus(self, truth_value):
+        self.telegrammed = truth_value
+
+    def getTitle(self):
+        return(self.title)
+    
+    def getAuthor(self):
+        return(self.article_author)    
+    
+    def getSummary(self):
+        return(self.article_summary)
+    
+    def getLink(self):
+        return(self.url)
+
+
+class Queue(object):
+    queue = {}
+    
+    def __init__(self, Article=None):
+        if (Article != None):
+            self.title = Article.getTitle()
+            Queue.queue[self.title] = Article
+    
+    def removeItem(self,article_title):
+        if article_title in Queue.queue.keys():
+            del Queue.queue[article_title]
+        else:
+            print((f"{datetime.datetime.now()}: Failed to find the article '{article_title}'. Action removeItem() could not be completed."))
+    
+    def getQueue(self):
+        return(list(Queue.queue.keys()))
+    
+    def getTelegrammedStatus(self, article_title):
+        if article_title in Queue.queue.keys():
+            return (Queue.queue[article_title].getTelegrammedStatus())
+        else:
+            print((f"{datetime.datetime.now()}: Failed to find the article '{article_title}'. Action getTelegrammedStatus() could not be completed."))
+    
+    def getTweetedStatus(self, article_title):
+        if article_title in Queue.queue.keys():
+            return (Queue.queue[article_title].getTweetedStatus())
+        else:
+            print((f"{datetime.datetime.now()}: Failed to find the article '{article_title}'. Action getTweetedStatus() could not be completed."))
+    
+    def setTweetedStatus(self, article_title):
+        if article_title in Queue.queue.keys():
+            Queue().getArticle(article_title).setTweetedStatus(True)
+            print((f"{datetime.datetime.now()}: Set the Tweeted status of the article '{article_title}' to 'True'."))
+        else:
+            print((f"{datetime.datetime.now()}: Failed to find the article '{article_title}'. Action setTweetedStatus() could not be completed."))
+
+    def setTelegrammedStatus(self, article_title):
+        if article_title in Queue.queue.keys():
+            Queue().getArticle(article_title).setTelegrammedStatus(True)
+            print((f"{datetime.datetime.now()}: Set the Telegrammed status of the article '{article_title}' to 'True'."))
+        else:
+            print((f"{datetime.datetime.now()}: Failed to find the article '{article_title}'. Action setTelegrammedStatus() could not be completed."))
+    
+    def getPublishedAllStatus(self, article_title):
+        if article_title in Queue.queue.keys():
+            return (Queue.queue[article_title].getPublishedAllStatus())
+        else:
+            print((f"{datetime.datetime.now()}: Failed to find the article '{article_title}'. Action getPublishedAllStatus() could not be completed."))
+    
+    def getArticle(self, article_title):
+        if article_title in Queue.queue.keys():
+            return(Queue.queue[article_title])
+        else:
+            print((f"{datetime.datetime.now()}: Failed to find the article '{article_title}'. Action getArticle() could not be completed."))
+
+def getAuthorHandle(author_name):
+    if not(mention_authors):
+        return ('')
+    
+    if 'newsclick' in author_name.lower():
+        return('')
+    else:
+        try:
+            return(_handles.loc[author_name, 'Twitter_Handle'])
+        except:
+            print(f"{datetime.datetime.now()}: Could not find '{author_name}' in the Twitter handle database.")
+            return(author_name)
+
+def makeTweet(art_obj):
+    author_list = art_obj.getAuthor()
+    author_handle_list = []
+
+    for author in author_list:
+        author_handle_list.append(getAuthorHandle(author))
+    
+    author_handle_string = ' '.join(author_handle_list)
+
+    message = f"{art_obj.getSummary()} {author_handle_string}\n{art_obj.getLink()}"
+    
+    if len(message) > 280:
+        message = f"{art_obj.getTitle()} {author_handle_string}\n{art_obj.getLink()}"
+        if len(message) > 280:
+            message = f"{art_obj.getTitle()}\n{art_obj.getLink()}"    
+    
+    _response = twitterPublish(message)
+    print(f"{datetime.datetime.now()}: The article '{art_obj.getTitle()}' has been tweeted.")
+
+def makeTelegram(art_obj):
+    message = f"<b>{art_obj.getTitle()}</b>\n<i>{'' if len(art_obj.getSummary()) > 300 else art_obj.getSummary()}</i> \n {art_obj.getLink()}?utm_source=telg"
+    _response = telegramPublish(message, TESTING)
+    print(f"{datetime.datetime.now()}: The article '{art_obj.getTitle()}' has been sent over Telegram.")
+
+def processQueue():
+    for item in Queue().getQueue():
+        if not(Queue().getTelegrammedStatus(item)):
+            makeTelegram(Queue().getArticle(item))
+            Queue().setTelegrammedStatus(item)
+
+        if not(Queue().getTweetedStatus(item)):
+            makeTweet((Queue().getArticle(item)))
+            Queue().setTweetedStatus(item)
+            break
+
+def queueUpdate(feed_url):
+    latest_feed = []
+    feed = feedparser.parse(feed_url)
+    for entry in feed['entries']:
+        latest_feed.append(entry['title']) 
+        if not(entry['title'] in Queue().getQueue()):
             try:
-                if (message_dict[i][4] == 1): #try to see if the article is queued to be tweeted
-                    del main_dict[i]
-                    del message_dict[i]
-                    arc += 1
-            except:
+                Queue(Article(entry['link'], entry['title'], entry['summary'], entry['author'], entry['published_parsed']))
                 pass
-
-    for article_title in main_dict.keys():
-        if not (article_title in message_dict.keys()):
-            message_dict[article_title] = [
-                messageComposer(article_title, main_dict, 1), messageComposer(article_title, main_dict, 0), 0]
-            main_dict[article_title][4] = 1 # Marking in the main_dict that tweet has been composed
-            tc += 1
-
-    printMessage(ac, arc, tc, len(main_dict.keys()), len(message_dict.keys()))
-
-    for article_title in message_dict.keys():
-        tweet_message = message_dict[article_title][0]
-        tele_message = message_dict[article_title][1]
-        if (message_dict[article_title][2] < 1):
-            try:
-                interval_condition = ((lastmessagetime == 0) or (
-                    (time.time()-starttime) > tweet_interval))
-                not_tweeted_condition = (main_dict[article_title][4] == 1)
-                not_duplicate_tweet_condition = (tweet_message != lastmessage)
-                if interval_condition and not_tweeted_condition and not_duplicate_tweet_condition:
-                    TweetPotte(tweet_message)
-                    tele_response = telegramPublish(tele_message)
-                    lastmessage, lastmessagetime, starttime = tweet_message, 1, time.time()
-                    main_dict[article_title][4], message_dict[article_title][2] = 2, 1
-                    print(str(datetime.datetime.now()) +
-                          ': ' + 'Transmitted a message ~ [' + tweet_message + ']')
             except:
-                print(str(datetime.datetime.now()) + ': ' +
-                      'Failed to transmit the message ~ [' + tweet_message + ']')
-    # Sleep duration set as 600 seconds or 10 minutes or the code will search for new entries every 10 minutes
-    print (str(datetime.datetime.now()) + ': Sleeping for ' +
-           str(refresh_interval) + ' seconds.')
-    time.sleep(refresh_interval)
+                Queue(Article(entry.get('link', None), entry.get('title', None), entry.get('summary', None),  entry.get('author'), entry.get('published_parsed', None)))
+                print(f"{datetime.datetime.now()}: The RSS feed '{feed_url}' has non-compliant keys. 'None' values have been inserted. Edit the XML keys suitably for compliance.")
+    return(latest_feed)
+
+def queueClean(latest_article_list):
+    for item in Queue().getQueue():
+        if (not(item in latest_article_list) and Queue().getPublishedAllStatus(item)):
+            Queue().removeItem(item)
+
+def startSputnik():
+    while(loop_condition):
+        global _handles
+        for a_url in url_list:
+            latest_article_list.extend(queueUpdate(a_url))
+        _handles = openSheet()
+        queueClean(list(set(latest_article_list)))
+        processQueue()
+        if not(TESTING):
+            print(f"{datetime.datetime.now()}: Sleeping for {t_sleep} seconds.")
+            time.sleep(t_sleep)
+
+if __name__ == "__main__":
+    print(f"{datetime.datetime.now()}: Initialising...")
+    latest_article_list = []
+    _handles = openSheet()
+    startSputnik()
