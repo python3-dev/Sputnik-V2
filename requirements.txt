@@ -1,4 +1,4 @@
-requests==2.22.0
+requests==2.31.0
 pygsheets==2.0.3.1
 pandas==1.0.5
 feedparser==5.2.1
